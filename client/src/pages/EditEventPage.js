@@ -1,46 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios"; // Ensure axios is imported
+import axiosInstance from "../api/axiosInstance"; // Changed to axiosInstance
 import EventForm from "../components/Events/EventForm";
-import { Container, Alert, Spinner, Button } from "react-bootstrap"; // Import Button
+import { Container, Alert, Spinner, Button } from "react-bootstrap";
 
 const EditEventPage = () => {
   const navigate = useNavigate();
   const { eventId } = useParams();
   const [initialData, setInitialData] = useState(null);
-  const [error, setError] = useState(""); // General form/page error
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false); // For form submission
   const [pageLoading, setPageLoading] = useState(true); // For initial data fetch
-
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [pdfExportError, setPdfExportError] = useState("");
 
   useEffect(() => {
     const fetchEvent = async () => {
       setError("");
       setPageLoading(true);
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          setError("No authentication token found. Please login.");
-          navigate("/login");
-          return;
-        }
-        // GET requests for events are public, but sending token doesn't hurt
-        const response = await axios.get(`/api/events/${eventId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Token is now handled by axiosInstance interceptor
+        const response = await axiosInstance.get(`/events/${eventId}`);
         setInitialData(response.data);
       } catch (err) {
         console.error(
           "Error fetching event:",
           err.response ? err.response.data : err.message
         );
-        setError(
-          err.response && err.response.data.message
-            ? err.response.data.message
-            : "Failed to load event data."
-        );
+        setError(err.response?.data?.message || "Failed to load event data.");
       } finally {
         setPageLoading(false);
       }
@@ -49,35 +34,59 @@ const EditEventPage = () => {
     if (eventId) {
       fetchEvent();
     }
-  }, [eventId, navigate]);
+  }, [eventId]); // Removed navigate from dependencies as it's stable
 
   const handleSubmit = async (eventData) => {
     setError("");
     setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("No authentication token found. Please login.");
-        navigate("/login");
-        return;
-      }
 
-      await axios.put(`/api/events/${eventId}`, eventData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const formData = new FormData();
+    formData.append("title", eventData.title);
+    formData.append("description", eventData.description);
+    formData.append("date", eventData.date);
+    if (eventData.location) {
+      formData.append("location", eventData.location);
+    }
+    if (eventData.contacts) {
+      formData.append("contacts", eventData.contacts);
+    }
+
+    // Append new image files
+    eventData.newImageFiles.forEach((file) => {
+      formData.append("imageGallery", file); // Use the same field name as backend expects for uploads
+    });
+
+    // Append images to remove (as JSON string or individual fields)
+    // Sending as a JSON string is often simpler for the backend to parse.
+    if (eventData.imagesToRemove && eventData.imagesToRemove.length > 0) {
+      formData.append(
+        "imagesToRemove",
+        JSON.stringify(eventData.imagesToRemove)
+      );
+    }
+
+    // Append existing images that are being kept (URLs)
+    // This helps the backend reconstruct the final imageGallery array.
+    if (eventData.existingImages && eventData.existingImages.length > 0) {
+      formData.append(
+        "existingImageUrls",
+        JSON.stringify(eventData.existingImages)
+      );
+    }
+
+    try {
+      // Token is handled by axiosInstance interceptor
+      // Axios will set Content-Type to multipart/form-data automatically for FormData
+      await axiosInstance.put(`/events/${eventId}`, formData);
 
       console.log("Event updated successfully");
-      navigate("/"); // Navigate to dashboard/calendar on success
+      navigate(`/events/${eventId}`); // Navigate to event detail page or dashboard
     } catch (err) {
       console.error(
         "Error updating event:",
         err.response ? err.response.data : err.message
       );
-      setError(
-        err.response && err.response.data.message
-          ? err.response.data.message
-          : "Failed to update event."
-      );
+      setError(err.response?.data?.message || "Failed to update event.");
     } finally {
       setLoading(false);
     }
@@ -94,113 +103,52 @@ const EditEventPage = () => {
     );
   }
 
+  // Error during page load
   if (error && !initialData) {
-    // Show general error if initial data failed to load
     return (
       <Container>
         <Alert variant="danger" className="mt-3">
           {error}
         </Alert>
+        <Button variant="secondary" onClick={() => navigate(-1)}>
+          Go Back
+        </Button>
       </Container>
     );
   }
 
-  const handleExportPdf = async () => {
-    setIsExportingPdf(true);
-    setPdfExportError("");
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setPdfExportError("Authentication required. Please login again.");
-        navigate("/login"); // Should be handled by ProtectedRoute or similar, but good fallback
-        return;
-      }
+  // If initialData is null after loading and no error, it implies event not found or still an issue.
+  if (!initialData && !pageLoading) {
+    return (
+      <Container>
+        <Alert variant="warning" className="mt-3">
+          Event data could not be loaded or event not found.
+        </Alert>
+        <Button variant="secondary" onClick={() => navigate(-1)}>
+          Go Back
+        </Button>
+      </Container>
+    );
+  }
 
-      const response = await axios.get(`/api/events/${eventId}/export-pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob", // Crucial for file download
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      const fileName =
-        initialData && initialData.title
-          ? `event_${initialData.title.replace(/\s+/g, "_")}_${eventId}.pdf`
-          : `event_${eventId}.pdf`;
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-
-      // Clean up
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(
-        "Error exporting PDF:",
-        err.response ? err.response.data : err.message
-      );
-      // Try to parse error from blob if it's a JSON error response
-      if (
-        err.response &&
-        err.response.data instanceof Blob &&
-        err.response.data.type === "application/json"
-      ) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          const errorData = JSON.parse(this.result);
-          setPdfExportError(
-            errorData.message ||
-              "Failed to export PDF. The server returned an error."
-          );
-        };
-        reader.readAsText(err.response.data);
-      } else {
-        setPdfExportError(
-          err.response && err.response.data && err.response.data.message
-            ? err.response.data.message
-            : "Failed to export PDF. Please try again."
-        );
-      }
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
-  // Show general form error if submission fails, or PDF export error
   return (
     <Container>
-      {error && !pdfExportError && (
+      {/* Display form submission error here, if any */}
+      {error && initialData && (
         <Alert variant="danger" className="mt-3">
           {error}
         </Alert>
       )}
-      {pdfExportError && (
-        <Alert variant="danger" className="mt-3">
-          {pdfExportError}
-        </Alert>
-      )}
-
       {initialData && (
-        <>
-          <EventForm
-            initialData={initialData}
-            onSubmit={handleSubmit}
-            isEditMode={true}
-            error={error} // Pass general form error to EventForm
-            loading={loading}
-          />
-          <div className="mt-3 d-flex justify-content-end">
-            <Button
-              variant="info"
-              onClick={handleExportPdf}
-              disabled={isExportingPdf || !initialData}
-            >
-              {isExportingPdf ? "Exporting..." : "Export to PDF"}
-            </Button>
-          </div>
-        </>
+        <EventForm
+          initialData={initialData}
+          onSubmit={handleSubmit}
+          isEditMode={true}
+          error={error} // Pass general form error to EventForm (might be redundant if displayed above too)
+          loading={loading}
+        />
       )}
+      {/* Removed PDF export button from here, can be on detail page */}
     </Container>
   );
 };

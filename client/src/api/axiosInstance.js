@@ -4,7 +4,7 @@ import axios from "axios";
 const getBaseUrl = () => {
   if (process.env.NODE_ENV === "production") {
     // Replace with your actual deployed backend URL
-    return "https://your-deployed-backend.onrender.com/api"; // Example for Render
+    return "https://eventtracker2.onrender.com/api"; // Updated production URL
   } else {
     // Development URL, ensure your server is running on port 5001 or the one in your server/.env
     return "http://localhost:5001/api";
