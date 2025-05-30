@@ -11,6 +11,7 @@ const EventDetailPage = () => {
   const [error, setError] = useState("");
   const [fullscreenImage, setFullscreenImage] = useState(null); // State for fullscreen image URL
   const [showFullscreen, setShowFullscreen] = useState(false); // State for fullscreen visibility
+  const [isDeleting, setIsDeleting] = useState(false); // State for delete operation
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -53,6 +54,29 @@ const EventDetailPage = () => {
     } catch (err) {
       console.error("Failed to export PDF:", err);
       alert("Failed to export PDF. Please try again.");
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this event? This action cannot be undone."
+      )
+    ) {
+      setIsDeleting(true);
+      setError("");
+      try {
+        await axiosInstance.delete(`/events/${eventId}`);
+        alert("Event deleted successfully.");
+        navigate("/"); // Navigate to dashboard or another appropriate page
+      } catch (err) {
+        console.error("Failed to delete event:", err);
+        setError(
+          err.response?.data?.message ||
+            "Failed to delete event. Please try again."
+        );
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -140,12 +164,12 @@ const EventDetailPage = () => {
                   <div
                     key={index}
                     className="rounded-lg overflow-hidden shadow cursor-pointer"
-                    onClick={() =>
-                      openFullscreen(`http://localhost:5000${imageUrl}`)
+                    onClick={
+                      () => openFullscreen(imageUrl) // Use Cloudinary URL directly
                     }
                   >
                     <img
-                      src={`http://localhost:5000${imageUrl}`}
+                      src={imageUrl} // Use Cloudinary URL directly
                       alt={`Event gallery ${index + 1}`}
                       className="w-full h-48 object-cover"
                     />
@@ -167,6 +191,13 @@ const EventDetailPage = () => {
               className="px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-md hover:bg-green-600"
             >
               Export to PDF
+            </button>
+            <button
+              onClick={handleDeleteEvent}
+              className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-md hover:bg-red-600 disabled:bg-red-300"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Event"}
             </button>
           </div>
         </div>

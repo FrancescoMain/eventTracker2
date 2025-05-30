@@ -1,7 +1,18 @@
 import axios from "axios";
 
+// Determine the base URL based on the environment
+const getBaseUrl = () => {
+  if (process.env.NODE_ENV === "production") {
+    // Replace with your actual deployed backend URL
+    return "https://your-deployed-backend.onrender.com/api"; // Example for Render
+  } else {
+    // Development URL, ensure your server is running on port 5001 or the one in your server/.env
+    return "http://localhost:5001/api";
+  }
+};
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:3000/api", // Your API base URL
+  baseURL: getBaseUrl(), // Use the dynamic base URL
 });
 
 // Request interceptor to add the token to headers

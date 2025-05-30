@@ -5,7 +5,7 @@ import axiosInstance from "../api/axiosInstance"; // Import the configured Axios
 // import EventForm from "../components/Events/EventForm";
 import { Container, Alert } from "react-bootstrap";
 
-// Debounce function (if still needed for position, otherwise can be removed if position is not using Nominatim)
+// Debounce function (if still needed for position, otherwise can be removed)
 const debounce = (func, delay) => {
   let timeout;
   return (...args) => {
@@ -27,6 +27,7 @@ const AddEventPage = () => {
   });
   const [error, setError] = useState("");
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(false); // New state for loading indicator
 
   // If using Nominatim for position, keep these, otherwise they can be removed.
   const [positionSuggestions, setPositionSuggestions] = useState([]);
@@ -121,6 +122,8 @@ const AddEventPage = () => {
       return;
     }
 
+    setIsLoading(true); // Set loading to true before API call
+
     const formData = new FormData();
     formData.append("title", eventData.eventName);
     formData.append("description", eventData.description);
@@ -165,6 +168,8 @@ const AddEventPage = () => {
         (err.response && err.response.data && err.response.data.message) ||
           "Failed to add event. Please try again."
       );
+    } finally {
+      setIsLoading(false); // Set loading to false after API call (success or failure)
     }
   };
 
@@ -199,8 +204,13 @@ const AddEventPage = () => {
             </h2>
           </div>
           {error && (
-            <Alert variant="danger" className="mx-4">
+            <Alert variant="danger" className="mx-4 mt-2">
               {error}
+            </Alert>
+          )}
+          {isLoading && (
+            <Alert variant="info" className="mx-4 mt-2">
+              Adding event, please wait...
             </Alert>
           )}
           <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
@@ -357,15 +367,25 @@ const AddEventPage = () => {
           </div>
         </div>
         <div>
-          <div className="flex px-4 py-3">
+          {/* Submit and Cancel Buttons */}
+          <div className="flex justify-end gap-3 p-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex items-center justify-center rounded-lg px-7 py-2.5 text-center text-base font-medium text-[#0d141c] hover:bg-slate-200 active:bg-slate-300 disabled:text-slate-400 disabled:bg-slate-100"
+              disabled={isLoading} // Disable cancel button during loading as well, or remove if not desired
+            >
+              Cancel
+            </button>
             <button
               type="submit"
-              className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 flex-1 bg-[#0b79ee] text-slate-50 text-base font-bold leading-normal tracking-[0.015em]"
+              className="flex items-center justify-center rounded-lg bg-[#0d141c] px-7 py-2.5 text-center text-base font-medium text-white hover:bg-slate-800 active:bg-slate-700 disabled:bg-slate-500"
+              disabled={isLoading} // Disable submit button during loading
             >
-              <span className="truncate">Add Event</span>
+              {isLoading ? "Adding..." : "Add Event"}{" "}
+              {/* Change button text during loading */}
             </button>
           </div>
-          <div className="h-5 bg-slate-50"></div>
         </div>
       </form>
     </div>

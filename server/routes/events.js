@@ -5,21 +5,24 @@ const router = express.Router();
 const path = require("path");
 const multer = require("multer");
 const fs = require("fs");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const axios = require("axios"); // Ensure axios is imported
 
-// Configure Multer storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, "..", "uploads", "events"); // Store in server/uploads/events
-    // Ensure the directory exists
-    fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    // Create a unique filename: fieldname-timestamp.extension
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Multer to use Cloudinary storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "event_tracker_uploads", // Optional: folder in Cloudinary
+    format: async (req, file) => "jpg", // supports promises as well
+    public_id: (req, file) => `${file.fieldname}-${Date.now()}`, //Saves files in Cloudinary with names like 'imageGallery-1629876543210'
   },
 });
 
@@ -36,7 +39,7 @@ const imageFileFilter = (req, file, cb) => {
 // 'imageGallery' is the field name from the client's FormData
 // 5 is the maximum number of files allowed, matching client-side
 const upload = multer({
-  storage: storage,
+  storage: storage, // Using Cloudinary storage
   fileFilter: imageFileFilter,
   limits: { fileSize: 1024 * 1024 * 10 }, // 10MB file size limit
 }).array("imageGallery", 5); // Expect an array of files from 'imageGallery' field, max 5 files
@@ -54,7 +57,7 @@ const authMiddleware = (req, res, next) => {
 
   try {
     // Verify token (replace 'yourSecretKey' with your actual secret from environment variable)
-    const decoded = jwt.verify(token, "yourSecretKey"); // Use the same secret key as in auth.js
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Use the same secret key as in auth.js
     req.user = decoded.user; // Add user from payload to request object
     next();
   } catch (err) {
@@ -87,9 +90,8 @@ router.post("/", authMiddleware, (req, res) => {
     let imagePaths = [];
 
     if (req.files && req.files.length > 0) {
-      // Construct paths to be stored in DB. These will be relative to the server's 'uploads' static path.
-      // e.g., /uploads/events/imageGallery-1629876543210.jpg
-      imagePaths = req.files.map((file) => `/uploads/events/${file.filename}`);
+      // Construct paths to be stored in DB. These will be URLs from Cloudinary.
+      imagePaths = req.files.map((file) => file.path); // file.path contains the Cloudinary URL
     }
 
     try {
@@ -146,7 +148,11 @@ router.get("/:id", authMiddleware, async (req, res) => {
 
 // PUT /api/events/:id - Update an event by ID
 router.put("/:id", authMiddleware, (req, res) => {
-  updateUpload(req, res, async function (err) {
+  // For updates, we'll use the same upload middleware.
+  // If new files are provided, they will be uploaded to Cloudinary.
+  // Existing images to keep will be sent in the body, and images not in that list will be (optionally) deleted.
+  upload(req, res, async function (err) {
+    // Changed updateUpload to upload
     if (err instanceof multer.MulterError) {
       console.error("Multer error on PUT:", err);
       return res.status(400).json({ message: err.message });
@@ -162,9 +168,20 @@ router.put("/:id", authMiddleware, (req, res) => {
     // If client sends it as 'existingImageUrls[]', req.body.existingImageUrls will be an array.
     // If client sends it as a JSON string, parse it. For simplicity, assume it's an array.
     let existingImageUrlsToKeep = req.body.existingImageUrls || [];
-    if (typeof existingImageUrlsToKeep === "string") {
-      // Handle single existing image case
-      existingImageUrlsToKeep = [existingImageUrlsToKeep];
+    if (
+      typeof existingImageUrlsToKeep === "string" &&
+      existingImageUrlsToKeep
+    ) {
+      try {
+        existingImageUrlsToKeep = JSON.parse(existingImageUrlsToKeep);
+      } catch (parseError) {
+        // If it's a single string URL and not JSON, wrap it in an array
+        existingImageUrlsToKeep = [existingImageUrlsToKeep];
+      }
+    }
+    if (!Array.isArray(existingImageUrlsToKeep)) {
+      // Ensure it's an array
+      existingImageUrlsToKeep = [];
     }
 
     const eventId = req.params.id;
@@ -175,26 +192,24 @@ router.put("/:id", authMiddleware, (req, res) => {
         return res.status(404).json({ message: "Event not found" });
       }
 
-      // --- Image Deletion Logic ---
-      const imagesToDelete = event.imageGallery.filter(
+      // --- Image Deletion Logic (from Cloudinary) ---
+      const imagesToDeleteFromCloudinary = event.imageGallery.filter(
         (imgUrl) => !existingImageUrlsToKeep.includes(imgUrl)
       );
 
-      imagesToDelete.forEach((imgUrlToDelete) => {
-        const fullPath = path.join(
-          __dirname,
-          "..",
-          imgUrlToDelete.startsWith("/")
-            ? imgUrlToDelete.substring(1)
-            : imgUrlToDelete
-        );
-        fs.unlink(fullPath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error(`Failed to delete old image ${fullPath}:`, unlinkErr);
-            // Log error but don't stop the update process
-          }
-        });
-      });
+      for (const imgUrlToDelete of imagesToDeleteFromCloudinary) {
+        try {
+          const publicId = path.parse(imgUrlToDelete).name; // Extract public_id from URL
+          await cloudinary.uploader.destroy(publicId);
+          console.log(`Successfully deleted ${publicId} from Cloudinary.`);
+        } catch (deleteError) {
+          console.error(
+            `Failed to delete ${imgUrlToDelete} from Cloudinary:`,
+            deleteError
+          );
+          // Log error but don't stop the update process
+        }
+      }
 
       // --- New Image Upload Logic ---
       let newUploadedImagePaths = [];
@@ -260,30 +275,33 @@ router.put("/:id", authMiddleware, (req, res) => {
 
 // DELETE /api/events/:id - Delete an event by ID
 router.delete("/:id", authMiddleware, async (req, res) => {
-  const eventId = req.params.id;
   try {
-    const event = await Event.findById(eventId);
+    const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    // --- Delete images from Cloudinary ---
     if (event.imageGallery && event.imageGallery.length > 0) {
-      event.imageGallery.forEach((imagePath) => {
-        const fullPath = path.join(
-          __dirname,
-          "..",
-          imagePath.startsWith("/") ? imagePath.substring(1) : imagePath
-        );
-        fs.unlink(fullPath, (err) => {
-          if (err) {
-            console.error(`Failed to delete image ${fullPath}:`, err);
-          }
-        });
-      });
+      for (const imgUrl of event.imageGallery) {
+        try {
+          const publicId = path.parse(imgUrl).name; // Extract public_id from URL
+          await cloudinary.uploader.destroy(publicId);
+          console.log(
+            `Successfully deleted ${publicId} from Cloudinary during event deletion.`
+          );
+        } catch (deleteError) {
+          console.error(
+            `Failed to delete ${imgUrl} from Cloudinary:`,
+            deleteError
+          );
+          // Log error but continue with event deletion from DB
+        }
+      }
     }
 
-    await Event.deleteOne({ _id: eventId });
-    res.json({ message: "Event removed successfully" });
+    await Event.findByIdAndDelete(req.params.id); // Corrected method
+    res.json({ message: "Event deleted successfully" });
   } catch (error) {
     console.error("Error deleting event:", error);
     if (error.kind === "ObjectId") {
@@ -318,6 +336,7 @@ router.get("/:id/export-pdf", authMiddleware, async (req, res) => {
       event.imageGallery && event.imageGallery.length > 0
         ? event.imageGallery.map(async (imgUrlOrPath) => {
             if (imgUrlOrPath.startsWith("/uploads/")) {
+              // Local file handling (legacy)
               const imagePath = path.join(
                 __dirname,
                 "..",
@@ -326,7 +345,7 @@ router.get("/:id/export-pdf", authMiddleware, async (req, res) => {
               try {
                 const imageAsBase64 = fs.readFileSync(imagePath, "base64");
                 const mimeType =
-                  path.extname(imagePath) === ".png"
+                  path.extname(imagePath).toLowerCase() === ".png"
                     ? "image/png"
                     : "image/jpeg";
                 return {
@@ -334,13 +353,55 @@ router.get("/:id/export-pdf", authMiddleware, async (req, res) => {
                   width: 150,
                 };
               } catch (imgErr) {
-                console.error("Error reading image for PDF:", imgErr);
-                return { text: `Image not found: ${imgUrlOrPath}` };
+                console.error(
+                  `Error reading local image for PDF: ${imagePath}`,
+                  imgErr
+                );
+                return { text: `Local image not found: ${imgUrlOrPath}` };
               }
             } else if (imgUrlOrPath.startsWith("http")) {
-              return { image: imgUrlOrPath, width: 150 };
+              // Cloudinary URL handling
+              try {
+                const imageResponse = await axios.get(imgUrlOrPath, {
+                  responseType: "arraybuffer",
+                });
+                const imageAsBase64 = Buffer.from(
+                  imageResponse.data,
+                  "binary"
+                ).toString("base64");
+                let mimeType = "image/jpeg"; // Default
+                if (imageResponse.headers["content-type"]) {
+                  mimeType = imageResponse.headers["content-type"];
+                } else {
+                  // Fallback: Guess from URL extension if content-type is not available
+                  if (imgUrlOrPath.toLowerCase().includes(".png"))
+                    mimeType = "image/png";
+                  else if (imgUrlOrPath.toLowerCase().includes(".gif"))
+                    mimeType = "image/gif";
+                }
+                return {
+                  image: `data:${mimeType};base64,${imageAsBase64}`,
+                  width: 150,
+                };
+              } catch (imgErr) {
+                console.error(
+                  `Error fetching image from URL ${imgUrlOrPath} for PDF:`,
+                  imgErr.message
+                );
+                return {
+                  text: `Image not loadable: ${imgUrlOrPath.substring(
+                    0,
+                    50
+                  )}...`,
+                };
+              }
             }
-            return { text: `Image: ${imgUrlOrPath}` };
+            return {
+              text: `Unsupported image source: ${imgUrlOrPath.substring(
+                0,
+                50
+              )}...`,
+            }; // Fallback
           })
         : [{ text: "No images available for this event." }];
 
@@ -357,7 +418,7 @@ router.get("/:id/export-pdf", authMiddleware, async (req, res) => {
         { text: "Description:", style: "subheader" },
         { text: event.description || "No description provided." },
         { text: "Images:", style: "subheader", marginTop: 10 },
-        ...imageContent,
+        ...imageContent, // Spread the processed image content here
         { text: "Contacts:", style: "subheader", marginTop: 10 },
         { text: event.contacts || "No contact information provided." },
         { text: "Location:", style: "subheader", marginTop: 10 },

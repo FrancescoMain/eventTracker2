@@ -250,9 +250,8 @@ const DashboardPage = () => {
                 >
                   {event.imageGallery && event.imageGallery.length > 0 && (
                     <img
-                      // Assuming image paths are relative to server root like '/uploads/events/image.jpg'
-                      // and server is running on http://localhost:5000
-                      src={`http://localhost:5000${event.imageGallery[0]}`}
+                      // Use the Cloudinary URL directly
+                      src={event.imageGallery[0]}
                       alt={event.title}
                       className="w-full h-48 object-cover"
                     />

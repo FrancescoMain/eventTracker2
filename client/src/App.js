@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Login from "./components/Auth/Login";
+import Register from "./components/Auth/Register"; // Import Register component
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import DashboardPage from "./pages/DashboardPage";
 import AddEventPage from "./pages/AddEventPage";
@@ -14,6 +15,8 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />{" "}
+          {/* Add register route */}
           <Route
             path="/"
             element={
