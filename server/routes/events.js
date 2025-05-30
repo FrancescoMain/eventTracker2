@@ -215,7 +215,7 @@ router.put("/:id", authMiddleware, (req, res) => {
       let newUploadedImagePaths = [];
       if (req.files && req.files.length > 0) {
         newUploadedImagePaths = req.files.map(
-          (file) => `/uploads/events/${file.filename}`
+          (file) => file.path // Use file.path which contains the Cloudinary URL
         );
       }
 

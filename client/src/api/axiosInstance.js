@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Determine the base URL based on the environment
 const getBaseUrl = () => {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" || true) {
     // Replace with your actual deployed backend URL
     return "https://eventtracker2.onrender.com/api"; // Updated production URL
   } else {

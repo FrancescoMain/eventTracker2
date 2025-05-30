@@ -16,7 +16,10 @@ const Login = () => {
 
     try {
       // If proxy is set up in package.json, this will be 'http://localhost:5000/api/auth/login'
-      const response = await axios.post("/api/auth/login", { email, password });
+      const response = await axios.post(
+        "https://eventtracker2.onrender.com/api/auth/login",
+        { email, password }
+      );
 
       localStorage.setItem("token", response.data.token);
       console.log("Login successful, token:", response.data.token);
