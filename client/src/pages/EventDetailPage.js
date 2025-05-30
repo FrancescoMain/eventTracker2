@@ -23,7 +23,7 @@ const EventDetailPage = () => {
       } catch (err) {
         console.error("Failed to fetch event details:", err);
         setError(
-          err.response?.data?.message || "Failed to load event details."
+          err.response?.data?.message || "Caricamento dettagli evento fallito."
         );
       } finally {
         setLoading(false);
@@ -53,27 +53,26 @@ const EventDetailPage = () => {
       window.URL.revokeObjectURL(link.href); // Clean up
     } catch (err) {
       console.error("Failed to export PDF:", err);
-      alert("Failed to export PDF. Please try again.");
+      alert("Esportazione PDF fallita. Riprova.");
     }
   };
 
   const handleDeleteEvent = async () => {
     if (
       window.confirm(
-        "Are you sure you want to delete this event? This action cannot be undone."
+        "Sei sicuro di voler eliminare questo evento? L'azione non può essere annullata."
       )
     ) {
       setIsDeleting(true);
       setError("");
       try {
         await axiosInstance.delete(`/events/${eventId}`);
-        alert("Event deleted successfully.");
+        alert("Evento eliminato con successo.");
         navigate("/"); // Navigate to dashboard or another appropriate page
       } catch (err) {
         console.error("Failed to delete event:", err);
         setError(
-          err.response?.data?.message ||
-            "Failed to delete event. Please try again."
+          err.response?.data?.message || "Eliminazione evento fallita. Riprova."
         );
         setIsDeleting(false);
       }
@@ -91,7 +90,9 @@ const EventDetailPage = () => {
   };
 
   if (loading) {
-    return <div className="p-4 text-center">Loading event details...</div>;
+    return (
+      <div className="p-4 text-center">Caricamento dettagli evento...</div>
+    );
   }
 
   if (error) {
@@ -99,7 +100,7 @@ const EventDetailPage = () => {
   }
 
   if (!event) {
-    return <div className="p-4 text-center">Event not found.</div>;
+    return <div className="p-4 text-center">Evento non trovato.</div>;
   }
 
   return (
@@ -113,16 +114,16 @@ const EventDetailPage = () => {
               {event.title}
             </h1>
             <button
-              onClick={() => navigate(-1)} // Go back to the previous page
+              onClick={() => navigate("/")} // Go back to the previous page
               className="text-sm text-blue-500 hover:text-blue-700"
             >
-              &larr; Back
+              &larr; Indietro
             </button>
           </div>
 
           <div className="mb-4">
             <p className="text-gray-600">
-              <span className="font-semibold">Date:</span>{" "}
+              <span className="font-semibold">Data:</span>{" "}
               {dayjs(event.date).format("MMMM D, YYYY h:mm A")}
             </p>
           </div>
@@ -130,8 +131,7 @@ const EventDetailPage = () => {
           {event.location && (
             <div className="mb-4">
               <p className="text-gray-600">
-                <span className="font-semibold">Location:</span>{" "}
-                {event.location}
+                <span className="font-semibold">Luogo:</span> {event.location}
               </p>
             </div>
           )}
@@ -139,7 +139,7 @@ const EventDetailPage = () => {
           {event.contacts && (
             <div className="mb-4">
               <p className="text-gray-600">
-                <span className="font-semibold">Contacts:</span>{" "}
+                <span className="font-semibold">Contatti:</span>{" "}
                 {event.contacts}
               </p>
             </div>
@@ -147,7 +147,7 @@ const EventDetailPage = () => {
 
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-700 mb-2">
-              Description
+              Descrizione
             </h2>
             <p className="text-gray-600 whitespace-pre-wrap">
               {event.description || "No description provided."}
@@ -157,73 +157,74 @@ const EventDetailPage = () => {
           {event.imageGallery && event.imageGallery.length > 0 && (
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-3">
-                Photo Gallery
+                Galleria Immagini
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {event.imageGallery.map((imageUrl, index) => (
-                  <div
-                    key={index}
-                    className="rounded-lg overflow-hidden shadow cursor-pointer"
-                    onClick={
-                      () => openFullscreen(imageUrl) // Use Cloudinary URL directly
-                    }
-                  >
-                    <img
-                      src={imageUrl} // Use Cloudinary URL directly
-                      alt={`Event gallery ${index + 1}`}
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+              {event.imageGallery && event.imageGallery.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {event.imageGallery.map((imageUrl, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg overflow-hidden shadow cursor-pointer"
+                      onClick={
+                        () => openFullscreen(imageUrl) // Use Cloudinary URL directly
+                      }
+                    >
+                      <img
+                        src={imageUrl} // Use Cloudinary URL directly
+                        alt={`Event gallery ${index + 1}`}
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">Nessuna immagine disponibile.</p>
+              )}
             </div>
           )}
 
-          <div className="mt-8 flex flex-col sm:flex-row justify-start space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="mt-8 flex flex-col sm:flex-row justify-start space-y-3 sm:space-y-0 sm:space-x-3">
             <Link
-              to={`/events/${event._id}/edit`}
-              className="px-4 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600 text-center"
+              to={`/events/${eventId}/edit`}
+              className="px-6 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600 text-center"
             >
-              Edit Event
+              Modifica Evento
             </Link>
             <button
               onClick={handleExportPdf}
-              className="px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-md hover:bg-green-600"
+              className="px-6 py-2 text-sm font-semibold text-white bg-green-500 rounded-md hover:bg-green-600"
             >
-              Export to PDF
+              Esporta in PDF
             </button>
             <button
               onClick={handleDeleteEvent}
-              className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-md hover:bg-red-600 disabled:bg-red-300"
+              className="px-6 py-2 text-sm font-semibold text-white bg-red-500 rounded-md hover:bg-red-600"
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete Event"}
+              {isDeleting ? "Eliminazione in corso..." : "Elimina Evento"}
             </button>
           </div>
         </div>
       </div>
+      {/* Fullscreen Image Modal */}
       {showFullscreen && fullscreenImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
-          onClick={closeFullscreen} // Close on clicking the background
+          onClick={closeFullscreen} // Close on overlay click
         >
-          <div
-            className="relative max-w-full max-h-full"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
+          <button
+            onClick={closeFullscreen}
+            className="absolute top-4 right-4 text-white text-3xl font-bold"
+            aria-label="Chiudi anteprima"
           >
-            <img
-              src={fullscreenImage}
-              alt="Fullscreen event"
-              className="block max-w-full max-h-[90vh] object-contain rounded-lg"
-            />
-            <button
-              onClick={closeFullscreen}
-              className="absolute top-2 right-2 md:top-4 md:right-4 bg-white text-black rounded-full p-2 text-lg leading-none hover:bg-gray-200"
-              aria-label="Close fullscreen"
-            >
-              &times;
-            </button>
-          </div>
+            &times;
+          </button>
+          <img
+            src={fullscreenImage}
+            alt="Anteprima immagine ingrandita"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image itself
+          />
         </div>
       )}
     </>

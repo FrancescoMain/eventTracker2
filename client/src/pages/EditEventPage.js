@@ -25,7 +25,7 @@ const EditEventPage = () => {
           "Error fetching event:",
           err.response ? err.response.data : err.message
         );
-        setError(err.response?.data?.message || "Failed to load event data.");
+        setError(err.response?.data?.message || "Caricamento evento fallito.");
       } finally {
         setPageLoading(false);
       }
@@ -86,7 +86,7 @@ const EditEventPage = () => {
         "Error updating event:",
         err.response ? err.response.data : err.message
       );
-      setError(err.response?.data?.message || "Failed to update event.");
+      setError(err.response?.data?.message || "Aggiornamento evento fallito.");
     } finally {
       setLoading(false);
     }
@@ -96,59 +96,50 @@ const EditEventPage = () => {
     return (
       <Container className="text-center mt-5">
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading event data...</span>
+          <span className="visually-hidden">Caricamento dati evento...</span>
         </Spinner>
-        <p>Loading event data...</p>
+        <p>Caricamento dati evento...</p>
       </Container>
     );
   }
 
-  // Error during page load
   if (error && !initialData) {
+    // Show error prominently if fetching failed and no data is available
     return (
-      <Container>
-        <Alert variant="danger" className="mt-3">
-          {error}
-        </Alert>
-        <Button variant="secondary" onClick={() => navigate(-1)}>
-          Go Back
-        </Button>
-      </Container>
-    );
-  }
-
-  // If initialData is null after loading and no error, it implies event not found or still an issue.
-  if (!initialData && !pageLoading) {
-    return (
-      <Container>
-        <Alert variant="warning" className="mt-3">
-          Event data could not be loaded or event not found.
-        </Alert>
-        <Button variant="secondary" onClick={() => navigate(-1)}>
-          Go Back
+      <Container className="text-center mt-5">
+        <Alert variant="danger">{error}</Alert>
+        <Button variant="secondary" onClick={() => navigate("/")}>
+          Indietro
         </Button>
       </Container>
     );
   }
 
   return (
-    <Container>
-      {/* Display form submission error here, if any */}
-      {error && initialData && (
+    <Container className="mt-4">
+      {/* Title "Edit Event" is in EventForm, handled there */}
+      {/* This page mainly orchestrates EventForm */}
+      {initialData && (
+        <EventForm
+          initialData={initialData} // Pass the full initialData object
+          onSubmit={handleSubmit}
+          isEditMode={true}
+          error={error} // Pass down error for EventForm to display if it handles it
+          loading={loading} // Pass down loading state
+        />
+      )}
+      {/* Display error here if it occurs during submit, or if initial fetch failed but we allow retry/render form */}
+      {error && !loading && (
         <Alert variant="danger" className="mt-3">
           {error}
         </Alert>
       )}
-      {initialData && (
-        <EventForm
-          initialData={initialData}
-          onSubmit={handleSubmit}
-          isEditMode={true}
-          error={error} // Pass general form error to EventForm (might be redundant if displayed above too)
-          loading={loading}
-        />
+      {loading && (
+        <div className="text-center mt-3">
+          <Spinner animation="border" size="sm" />
+          <p>Aggiornamento in corso...</p> {/* Updating... */}
+        </div>
       )}
-      {/* Removed PDF export button from here, can be on detail page */}
     </Container>
   );
 };

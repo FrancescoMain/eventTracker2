@@ -7,6 +7,7 @@ import DashboardPage from "./pages/DashboardPage";
 import AddEventPage from "./pages/AddEventPage";
 import EditEventPage from "./pages/EditEventPage";
 import EventDetailPage from "./pages/EventDetailPage"; // Import EventDetailPage
+import UserProfilePage from "./pages/UserProfilePage"; // Import UserProfilePage
 import "./App.css";
 
 function App() {
@@ -46,6 +47,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <EventDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <UserProfilePage />
               </ProtectedRoute>
             }
           />

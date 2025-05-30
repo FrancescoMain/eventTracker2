@@ -24,11 +24,11 @@ const Register = () => {
     setSuccess("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Le password non coincidono");
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError("La password deve contenere almeno 6 caratteri");
       return;
     }
 
@@ -36,14 +36,14 @@ const Register = () => {
       const body = { username, email, password };
       // The backend route is /api/auth/register
       const res = await axiosInstance.post("/auth/register", body);
-      setSuccess("Registration successful! Please login.");
+      setSuccess("Registrazione completata! Effettua l'accesso.");
       // Optionally redirect to login after a short delay
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Registration failed. Please try again."
+        err.response?.data?.message || "Registrazione fallita. Riprova."
       );
       console.error("Registration error:", err.response?.data || err.message);
     }
@@ -55,12 +55,12 @@ const Register = () => {
         <div className="col-md-6">
           <div className="card">
             <div className="card-body">
-              <h2 className="card-title text-center mb-4">Register</h2>
+              <h2 className="card-title text-center mb-4">Registrati</h2>
               {error && <div className="alert alert-danger">{error}</div>}
               {success && <div className="alert alert-success">{success}</div>}
               <form onSubmit={onSubmit}>
                 <div className="form-group mb-3">
-                  <label htmlFor="username">Username</label>
+                  <label htmlFor="username">Nome utente</label>
                   <input
                     type="text"
                     className="form-control"
@@ -72,7 +72,7 @@ const Register = () => {
                   />
                 </div>
                 <div className="form-group mb-3">
-                  <label htmlFor="email">Email address</label>
+                  <label htmlFor="email">Indirizzo email</label>
                   <input
                     type="email"
                     className="form-control"
@@ -97,7 +97,7 @@ const Register = () => {
                   />
                 </div>
                 <div className="form-group mb-3">
-                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <label htmlFor="confirmPassword">Conferma Password</label>
                   <input
                     type="password"
                     className="form-control"
@@ -110,11 +110,11 @@ const Register = () => {
                   />
                 </div>
                 <button type="submit" className="btn btn-primary w-100">
-                  Register
+                  Registrati
                 </button>
               </form>
               <p className="mt-3 text-center">
-                Already have an account? <Link to="/login">Login here</Link>
+                Hai già un account? <Link to="/login">Accedi qui</Link>
               </p>
             </div>
           </div>

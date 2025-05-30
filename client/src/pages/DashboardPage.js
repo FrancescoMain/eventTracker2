@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
+import "dayjs/locale/it"; // Import Italian locale for dayjs
 import { useNavigate, Link } from "react-router-dom"; // Added Link
 import axiosInstance from "../api/axiosInstance";
 import { Button, Container, Row, Col } from "react-bootstrap";
 
-const daysShort = ["S", "M", "T", "W", "T", "F", "S"];
+const daysShort = ["D", "L", "M", "M", "G", "V", "S"]; // Italian day abbreviations
 
 function getMonthMatrix(year, month) {
-  const firstDayOfMonth = dayjs(new Date(year, month, 1));
+  const firstDayOfMonth = dayjs(new Date(year, month, 1)).locale("it"); // Set locale for calculations
   const startDay = firstDayOfMonth.day(); // 0 (Sunday) to 6 (Saturday)
   const daysInMonth = firstDayOfMonth.daysInMonth();
 
@@ -42,8 +43,8 @@ function getMonthMatrix(year, month) {
 
 const DashboardPage = () => {
   const [events, setEvents] = useState([]);
-  const [currentDate, setCurrentDate] = useState(dayjs());
-  const [selectedDate, setSelectedDate] = useState(dayjs()); // Initialize with current day
+  const [currentDate, setCurrentDate] = useState(dayjs().locale("it")); // Set locale for current date
+  const [selectedDate, setSelectedDate] = useState(dayjs().locale("it")); // Set locale for selected date
   const navigate = useNavigate();
 
   const year = currentDate.year();
@@ -56,7 +57,7 @@ const DashboardPage = () => {
         const response = await axiosInstance.get("/events");
         setEvents(response.data);
       } catch (error) {
-        console.error("Failed to fetch events:", error);
+        console.error("Recupero eventi fallito:", error); // Translated error message
       }
     };
     fetchEvents();
@@ -72,22 +73,22 @@ const DashboardPage = () => {
 
   const eventsForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
-    return events.filter((event) =>
-      dayjs(event.date).isSame(selectedDate, "day")
+    return events.filter(
+      (event) => dayjs(event.date).locale("it").isSame(selectedDate, "day") // Set locale for comparison
     );
   }, [events, selectedDate]);
 
   const handlePrevMonth = () => {
-    setCurrentDate(currentDate.subtract(1, "month"));
+    setCurrentDate(currentDate.subtract(1, "month").locale("it")); // Set locale after operation
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(currentDate.add(1, "month"));
+    setCurrentDate(currentDate.add(1, "month").locale("it")); // Set locale after operation
   };
 
   const handleDateClick = (day) => {
     if (day) {
-      setSelectedDate(dayjs(new Date(year, month, day)));
+      setSelectedDate(dayjs(new Date(year, month, day)).locale("it")); // Set locale on selection
     }
   };
 
@@ -122,7 +123,7 @@ const DashboardPage = () => {
             </svg>
           </div>
           <h2 className="text-[#0d141c] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
-            Calendar
+            Calendario
           </h2>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-6 p-4">
@@ -175,7 +176,7 @@ const DashboardPage = () => {
                   key={dayName}
                   className="text-[#0d141c] text-[13px] font-bold leading-normal tracking-[-0.015em] flex h-12 w-full items-center justify-center pb-0.5"
                 >
-                  {dayName}
+                  {dayName} {/* Already updated via daysShort array */}
                 </p>
               ))}
               {monthMatrix.flat().map((day, index) => {
@@ -186,9 +187,9 @@ const DashboardPage = () => {
 
                 let dayFormatted = null;
                 if (isCurrentMonthDay) {
-                  dayFormatted = dayjs(new Date(year, month, day)).format(
-                    "YYYY-MM-DD"
-                  );
+                  dayFormatted = dayjs(new Date(year, month, day))
+                    .locale("it") // Set locale for formatting
+                    .format("YYYY-MM-DD");
                 }
                 const hasEvent =
                   isCurrentMonthDay && eventDates.has(dayFormatted);
@@ -240,7 +241,7 @@ const DashboardPage = () => {
         {selectedDate && eventsForSelectedDate.length > 0 && (
           <div className="p-4">
             <h3 className="text-lg font-semibold mb-3 text-[#0d141c]">
-              Events on {selectedDate.format("MMMM D, YYYY")}
+              Eventi on {selectedDate.format("MMMM D, YYYY")}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {eventsForSelectedDate.map((event) => (
@@ -274,7 +275,7 @@ const DashboardPage = () => {
                         to={`/events/${event._id}`}
                         className="px-3 py-1 text-xs font-semibold text-white bg-green-500 rounded hover:bg-green-600"
                       >
-                        Details
+                        Dettagli
                       </Link>
                       {/* The "View" action can be similar to "Details" or a modal later */}
                       {/* <button
@@ -294,8 +295,9 @@ const DashboardPage = () => {
           eventsForSelectedDate.length === 0 &&
           eventDates.has(selectedDate.format("YYYY-MM-DD")) && (
             <div className="p-4 text-center text-gray-500">
-              No events scheduled for {selectedDate.format("MMMM D, YYYY")}, but
-              other events exist this month.
+              Nessun evento programmato per{" "}
+              {selectedDate.format("MMMM D, YYYY")}, ma ci sono altri eventi
+              programmati per questo mese.
             </div>
           )}
       </div>
@@ -348,7 +350,8 @@ const DashboardPage = () => {
           </a>
           <a
             className="just flex flex-1 flex-col items-center justify-end gap-1 text-[#49709c]"
-            href="#"
+            href="#" // Keep href for semantics or remove if Link component is used
+            onClick={() => navigate("/profile")} // Add onClick handler to navigate
           >
             <div
               className="text-[#49709c] flex h-8 items-center justify-center"

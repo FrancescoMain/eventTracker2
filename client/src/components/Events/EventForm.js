@@ -109,14 +109,14 @@ const EventForm = ({
     <Container className="mt-4">
       <Row className="justify-content-md-center">
         <Col md={8}>
-          <h2>{isEditMode ? "Edit Event" : "Create New Event"}</h2>
+          <h2>{isEditMode ? "Modifica Evento" : "Crea Nuovo Evento"}</h2>
           {error && <Alert variant="danger">{error}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3" controlId="eventTitle">
-              <Form.Label>Title</Form.Label>
+              <Form.Label>Titolo</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Enter event title"
+                placeholder="Inserisci il titolo dell'evento"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -124,11 +124,11 @@ const EventForm = ({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="eventDescription">
-              <Form.Label>Description</Form.Label>
+              <Form.Label>Descrizione</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
-                placeholder="Event description"
+                placeholder="Descrizione dell'evento"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
@@ -136,33 +136,34 @@ const EventForm = ({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="eventDate">
-              <Form.Label>Date</Form.Label>
+              <Form.Label>Data</Form.Label>
               <br />
               <DatePicker
                 selected={date}
                 onChange={(newDate) => setDate(newDate)}
                 className="form-control"
-                dateFormat="MMMM d, yyyy h:mm aa"
+                dateFormat="d MMMM yyyy HH:mm"
                 showTimeSelect
                 required
+                locale="it" // Added for Italian localization of DatePicker
               />
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="eventLocation">
-              <Form.Label>Location</Form.Label>
+              <Form.Label>Luogo</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Event location"
+                placeholder="Luogo dell'evento"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               />
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="eventContacts">
-              <Form.Label>Contacts</Form.Label>
+              <Form.Label>Contatti</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Contact information (phone, email)"
+                placeholder="Informazioni di contatto (telefono, email)"
                 value={contacts}
                 onChange={(e) => setContacts(e.target.value)}
               />
@@ -170,7 +171,7 @@ const EventForm = ({
 
             {/* Image Gallery Management */}
             <Form.Group className="mb-3" controlId="eventImageGalleryUpload">
-              <Form.Label>Add New Images</Form.Label>
+              <Form.Label>Aggiungi Nuove Immagini</Form.Label>
               <Form.Control
                 type="file"
                 multiple
@@ -182,7 +183,7 @@ const EventForm = ({
             {/* Previews for New Images */}
             {imagePreviews.length > 0 && (
               <div className="mb-3">
-                <h5>New Images Preview:</h5>
+                <h5>Anteprima Nuove Immagini:</h5>
                 <Row>
                   {imagePreviews.map((previewUrl, index) => (
                     <Col
@@ -214,7 +215,7 @@ const EventForm = ({
             {/* Display Existing Images (from Cloudinary) */}
             {isEditMode && existingImages.length > 0 && (
               <div className="mb-3">
-                <h5>Existing Images:</h5>
+                <h5>Immagini Esistenti:</h5>
                 <Row>
                   {existingImages.map((imageUrl, index) => (
                     <Col
@@ -246,7 +247,9 @@ const EventForm = ({
                           right: "15px",
                         }}
                       >
-                        {imagesToRemove.includes(imageUrl) ? "Undo" : "Remove"}
+                        {imagesToRemove.includes(imageUrl)
+                          ? "Annulla"
+                          : "Rimuovi"}
                       </Button>
                     </Col>
                   ))}
@@ -256,11 +259,11 @@ const EventForm = ({
             <Button variant="primary" type="submit" disabled={loading}>
               {loading
                 ? isEditMode
-                  ? "Updating..."
-                  : "Creating..."
+                  ? "Aggiornamento..."
+                  : "Creazione..."
                 : isEditMode
-                ? "Update Event"
-                : "Create Event"}
+                ? "Aggiorna Evento"
+                : "Crea Evento"}
             </Button>
           </Form>
         </Col>

@@ -35,7 +35,7 @@ const Login = () => {
       setError(
         err.response && err.response.data.message
           ? err.response.data.message
-          : "Login failed. Please check your credentials."
+          : "Accesso fallito. Controlla le tue credenziali."
       );
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ const Login = () => {
           </h2>
         </div>
         <h2 className="text-[#0d141c] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
-          Welcome Back
+          Bentornato
         </h2>
         {error && (
           <div className="px-4 pb-2">
@@ -98,19 +98,19 @@ const Login = () => {
               disabled={loading}
             >
               <span className="truncate">
-                {loading ? "Logging in..." : "Log In"}
+                {loading ? "Accesso in corso..." : "Accedi"}
               </span>
             </button>
           </div>
         </form>
         <p className="text-[#49709c] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center underline">
-          Don't have an account? Sign up
+          Non hai un account? Iscriviti
         </p>
       </div>
       <div>
         <footer className="flex flex-col gap-6 px-5 py-10 text-center @container">
           <p className="text-[#49709c] text-base font-normal leading-normal">
-            @2024 Event Tracker. All rights reserved.
+            @2024 Event Tracker. Tutti i diritti riservati.
           </p>
         </footer>
         <div className="h-5 bg-slate-50"></div>
